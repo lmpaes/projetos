@@ -1,2 +1,0 @@
-# projetos
-Desenvolvimento de projetos
