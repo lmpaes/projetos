@@ -1,8 +1,10 @@
 /*Projeto desenvolvido para simular uma clínica medica para estudo de linguagem SQL, não contem nomes ou informações reais*/
 
-create database clinica;
-use clinica;
 
+create database clinica; /*criação da database*/
+use clinica; /*seleção da database para uso*/
+
+/*Criando e populando tabelas*/
 create table especialidade (
 idEspecialidade int primary key auto_increment,
 nomeEspecialidade varchar(50) not null
