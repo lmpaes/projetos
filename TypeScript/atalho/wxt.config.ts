@@ -15,7 +15,12 @@ export default defineConfig({
     description:
       'Digite um atalho (ex.: /sig) e ele vira o texto do snippet. Projeto de estudo.',
     // Permissões entram conforme as etapas precisarem delas (ver CLAUDE.md).
-    permissions: [],
+    permissions: [
+      // {clipboard}: ler a área de transferência (no content script e no offscreen).
+      'clipboardRead',
+      // Documento offscreen: plano B para ler o clipboard quando a página bloqueia.
+      'offscreen',
+    ],
     // A chave "action" faz o ícone aparecer na barra; o clique abre o dashboard
     // (tratado em src/entrypoints/background.ts).
     action: {

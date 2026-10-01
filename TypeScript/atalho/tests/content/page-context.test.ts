@@ -83,7 +83,10 @@ describe('readableTopWindow', () => {
     const iframe = document.createElement('iframe');
     document.body.append(iframe);
     const frameWindow = iframe.contentWindow as Window;
-    expect(readableTopWindow(frameWindow)).toBe(window);
+    // Comparamos o documento: no Vitest, `window` é uma cópia da janela do jsdom,
+    // então comparar as janelas com toBe daria falso mesmo estando certo.
+    expect(readableTopWindow(frameWindow).document).toBe(document);
+    expect(readableTopWindow(frameWindow)).not.toBe(frameWindow);
   });
 
   it('num iframe de outra origem, devolve o próprio frame', () => {
