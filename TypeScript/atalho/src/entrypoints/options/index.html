@@ -9,10 +9,131 @@
     <link rel="stylesheet" href="./style.css" />
   </head>
   <body>
-    <main>
-      <h1>Atalho</h1>
-      <p id="status">Dashboard em construção (etapa 7).</p>
+    <header class="topbar">
+      <div>
+        <h1>Atalho</h1>
+        <p class="subtitle">Seus snippets: digite o atalho em qualquer campo e ele vira o texto.</p>
+      </div>
+      <div class="topbar-actions">
+        <button id="export-button" type="button">Exportar backup</button>
+        <button id="import-button" type="button">Importar backup</button>
+        <input id="import-file" type="file" accept="application/json,.json" hidden />
+      </div>
+    </header>
+
+    <p id="status" class="status" role="status" aria-live="polite"></p>
+
+    <section id="import-panel" class="panel" aria-labelledby="import-title" hidden>
+      <h2 id="import-title">Importar backup</h2>
+      <p id="import-summary"></p>
+      <fieldset id="import-options">
+        <legend>Como importar?</legend>
+        <label>
+          <input type="radio" name="import-mode" value="merge" checked />
+          Mesclar: mantém os seus snippets e adiciona os do arquivo (atalhos repetidos são pulados)
+        </label>
+        <label>
+          <input type="radio" name="import-mode" value="replace" />
+          Substituir tudo: apaga os seus snippets e usa só os do arquivo
+        </label>
+      </fieldset>
+      <div id="import-report"></div>
+      <div class="form-actions">
+        <button id="import-confirm" type="button" class="primary">Importar</button>
+        <button id="import-cancel" type="button">Fechar</button>
+      </div>
+    </section>
+
+    <main class="layout">
+      <aside class="sidebar" aria-label="Lista de snippets">
+        <button id="new-button" type="button" class="primary">+ Novo snippet</button>
+        <label for="search" class="visually-hidden">Buscar snippets</label>
+        <input id="search" type="search" placeholder="Buscar por nome, atalho ou conteúdo" />
+        <ul id="snippet-list" class="snippet-list"></ul>
+        <p id="empty-list" class="empty" hidden></p>
+      </aside>
+
+      <section class="editor" aria-labelledby="editor-title">
+        <h2 id="editor-title">Novo snippet</h2>
+        <form id="snippet-form" novalidate>
+          <div class="field">
+            <label for="name">Nome</label>
+            <input id="name" type="text" placeholder="Ex.: Assinatura do e-mail" autocomplete="off" />
+            <div id="name-messages" class="messages"></div>
+          </div>
+          <div class="field">
+            <label for="shortcut">Atalho</label>
+            <input id="shortcut" type="text" placeholder="Ex.: /sig" autocomplete="off" spellcheck="false" />
+            <div id="shortcut-messages" class="messages"></div>
+          </div>
+          <div class="field">
+            <label for="content">Conteúdo</label>
+            <textarea id="content" rows="10" spellcheck="false"
+              placeholder="Ex.: Att, Leo — {time: DD/MM/YYYY}"></textarea>
+            <div id="content-messages" class="messages"></div>
+          </div>
+          <div class="form-actions">
+            <button id="save-button" type="submit" class="primary">Salvar <kbd>Ctrl+S</kbd></button>
+            <button id="delete-button" type="button" class="danger">Excluir</button>
+          </div>
+        </form>
+
+        <section class="preview" aria-labelledby="preview-title">
+          <h3 id="preview-title">Preview</h3>
+          <pre id="preview-output" class="preview-output"></pre>
+          <ul id="preview-errors" class="preview-errors"></ul>
+        </section>
+
+        <details id="test-page" class="panel">
+          <summary>Página de teste: o que o {site} e o {clipboard} enxergam no preview</summary>
+          <div class="field">
+            <label for="test-url">URL</label>
+            <input id="test-url" type="url" spellcheck="false" />
+          </div>
+          <div class="field">
+            <label for="test-title">Título da aba</label>
+            <input id="test-title" type="text" />
+          </div>
+          <div class="field">
+            <label for="test-selection">Texto selecionado</label>
+            <input id="test-selection" type="text" />
+          </div>
+          <div class="field">
+            <label for="test-clipboard">Área de transferência</label>
+            <input id="test-clipboard" type="text" />
+          </div>
+          <div class="field">
+            <label for="test-html">HTML da página (cole aqui para testar seletores)</label>
+            <textarea id="test-html" rows="6" spellcheck="false"></textarea>
+          </div>
+        </details>
+
+        <details class="panel cheatsheet">
+          <summary>Cola rápida de comandos</summary>
+          <dl>
+            <dt><code>{site: url}</code> · <code>domain</code> · <code>path</code> · <code>protocol</code> · <code>query</code> · <code>hash</code></dt>
+            <dd>Partes da URL da página atual.</dd>
+            <dt><code>{site: title}</code> · <code>{site: selection}</code></dt>
+            <dd>Título da aba e texto selecionado na página.</dd>
+            <dt><code>{site: text; selector=.cliente .nome}</code></dt>
+            <dd>Texto do 1º elemento que casa com o seletor CSS. Use <code>html</code> para o HTML e <code>multiple=yes</code> para todos.</dd>
+            <dt><code>{time: DD/MM/YYYY HH:mm}</code> · <code>{time: LL}</code></dt>
+            <dd>Data e hora atuais. Texto fixo vai entre colchetes: <code>{time: [Hoje é] dddd}</code>.</dd>
+            <dt><code>{clipboard}</code></dt>
+            <dd>Texto copiado (Ctrl+C).</dd>
+            <dt><code>{=extractregex({site: query}, "id=([^&amp;]+)")}</code></dt>
+            <dd>Extrai um pedaço do texto com uma expressão regular (1º grupo entre parênteses).</dd>
+            <dt><code>{=catch({site: text; selector=.nome}, "Não encontrado")}</code></dt>
+            <dd>Se o que está dentro falhar, usa o texto padrão.</dd>
+            <dt><code>{id=extractregex({site: path}, "/([^/]+)$")}</code> e depois <code>{=id}</code></dt>
+            <dd>Guarda um valor numa variável e usa depois.</dd>
+            <dt><code>\{</code> e <code>\}</code></dt>
+            <dd>Chaves literais (quando não é um comando).</dd>
+          </dl>
+        </details>
+      </section>
     </main>
+
     <script type="module" src="./main.ts"></script>
   </body>
 </html>
