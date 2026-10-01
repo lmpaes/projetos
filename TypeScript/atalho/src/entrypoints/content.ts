@@ -1,10 +1,12 @@
 import { defineContentScript } from 'wxt/utils/define-content-script';
 import { readClipboard } from '@/content/clipboard';
+import { createDiagnosticLog } from '@/content/diagnostics';
 import { attachExpander } from '@/content/expander';
 import { createMatcher } from '@/content/matcher';
 import { createPageProvider, trackSelection } from '@/content/page-context';
 import { showErrorToast } from '@/content/toast';
 import { createDefaultEngine, renderTemplate } from '@/engine';
+import { debugModeItem } from '@/storage/settings';
 import { listSnippets, watchSnippets } from '@/storage/snippets';
 
 // Content script: código que o Chrome injeta em cada página visitada.
@@ -22,10 +24,24 @@ export default defineContentScript({
   async main(ctx) {
     const engine = createDefaultEngine();
 
+    // Modo diagnóstico: liga/desliga pelo dashboard, vale na hora.
+    let debugEnabled = await debugModeItem.getValue();
+    const unwatchDebug = debugModeItem.watch((enabled) => {
+      debugEnabled = enabled;
+    });
+    const log = createDiagnosticLog(() => debugEnabled);
+
     // Snippets em memória; atualizados sempre que o dashboard salvar algo.
-    let matcher = createMatcher(await listSnippets());
-    const unwatch = watchSnippets((snippets) => {
-      matcher = createMatcher(snippets);
+    const snippets = await listSnippets();
+    let matcher = createMatcher(snippets);
+    const unwatch = watchSnippets((updated) => {
+      matcher = createMatcher(updated);
+      log('lista de snippets atualizada', { quantidade: updated.length });
+    });
+    log('content script carregado', {
+      url: location.href,
+      frame: window === window.top ? 'página principal' : 'iframe',
+      snippets: snippets.length,
     });
 
     // Lembra a última seleção feita na página (para o {site: selection}).
@@ -40,12 +56,14 @@ export default defineContentScript({
           now: () => new Date(),
         }),
       onErrors: (errors, snippet) => showErrorToast(document, snippet.shortcut, errors),
+      log,
     });
 
     // Quando a extensão é atualizada/recarregada, este script "antigo" para de valer.
     ctx.onInvalidated(() => {
       detach();
       unwatch();
+      unwatchDebug();
       selectionTracker.dispose();
     });
   },

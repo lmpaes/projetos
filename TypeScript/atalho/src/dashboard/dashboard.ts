@@ -354,7 +354,20 @@ export async function initDashboard(doc: Document, deps: DashboardDeps): Promise
     renderValidation();
   });
 
+  // Modo diagnóstico (Configurações)
+  on(ui.debugMode, 'change', () => {
+    const enabled = ui.debugMode.checked;
+    void deps.settings.setDebugMode(enabled).then(() =>
+      setStatus(
+        enabled
+          ? 'Modo diagnóstico ligado: recarregue a aba do site e abra o console (F12 → Console) para ver os passos.'
+          : 'Modo diagnóstico desligado.',
+      ),
+    );
+  });
+
   // --- Começo ----------------------------------------------------------------------
+  ui.debugMode.checked = await deps.settings.getDebugMode();
   ui.testUrl.value = DEFAULT_PREVIEW_PAGE.url;
   ui.testTitle.value = DEFAULT_PREVIEW_PAGE.title;
   ui.testHtml.value = DEFAULT_PREVIEW_PAGE.html;
@@ -421,5 +434,6 @@ function findElements(doc: Document) {
     testHtml: get<HTMLTextAreaElement>('test-html'),
     testSelection: get<HTMLInputElement>('test-selection'),
     testClipboard: get<HTMLInputElement>('test-clipboard'),
+    debugMode: get<HTMLInputElement>('debug-mode'),
   };
 }

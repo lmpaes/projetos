@@ -1,18 +1,20 @@
 // =============================================================================
 // Troca o atalho (os N caracteres antes do cursor) pelo texto do snippet.
 // -----------------------------------------------------------------------------
-// Caminho principal: selecionar o atalho e chamar
-// document.execCommand('insertText'). É como se o usuário tivesse digitado o
-// texto: o Ctrl+Z funciona, e editores como Gmail, React e ProseMirror
-// entendem a mudança.
-//
-// Plano B (se o execCommand não existir ou recusar):
-//   - input/textarea: setter NATIVO de value + eventos input/change;
-//   - contenteditable: troca os nós de texto à mão + evento input.
+// 1. Editores com "modelo próprio" (CKEditor 5 do Zendesk, ProseMirror,
+//    Lexical, Slate...): selecionamos o atalho e disparamos uma COLAGEM
+//    sintética (evento paste com o texto). O editor insere pelo próprio
+//    caminho dele, então nada é desfeito e o Ctrl+Z funciona.
+// 2. Caminho principal (Gmail, campos comuns): selecionar o atalho e chamar
+//    document.execCommand('insertText'). É como se o usuário tivesse digitado.
+// 3. Plano B (se o execCommand não existir ou recusar):
+//    - input/textarea: setter NATIVO de value + eventos input/change;
+//    - contenteditable: troca os nós de texto à mão + evento input.
 // =============================================================================
 
 import { getSelectionFor, rangeBeforeCaret, textControlCaret } from './caret';
 import type { EditableTarget } from './editable';
+import { detectRichEditor } from './rich-editors';
 
 /** Como o texto foi inserido: colagem sintética, caminho principal ou plano B. */
 export type InsertMethod = 'paste' | 'execCommand' | 'fallback';
@@ -21,23 +23,31 @@ export type InsertMethod = 'paste' | 'execCommand' | 'fallback';
  * Substitui os `length` caracteres antes do cursor por `text`.
  * Devolve null se não conseguiu achar o trecho (o cursor saiu do lugar).
  */
-export function replaceBeforeCaret(
+export async function replaceBeforeCaret(
   target: EditableTarget,
   length: number,
   text: string,
 ): Promise<InsertMethod | null> {
-  return Promise.resolve(
-    target.kind === 'text-control'
-      ? replaceInTextControl(target.element, length, text)
-      : replaceInContentEditable(target.element, length, text),
-  );
+  if (target.kind === 'text-control') return replaceInTextControl(target.element, length, text);
+  return replaceInContentEditable(target.element, length, text);
 }
 
-/** ETAPA 7.1 (TDD): ainda não implementado. */
+/**
+ * Espera a página processar a mudança de seleção.
+ * Editores como o CKEditor 5 só atualizam a seleção do "modelo" deles quando
+ * recebem o evento selectionchange (que o navegador manda um pouco depois).
+ * Se colássemos antes disso, o texto entraria no lugar antigo do cursor.
+ */
 export function waitForSelectionSync(doc: Document, timeoutMs = 50): Promise<void> {
-  void doc;
-  void timeoutMs;
-  return Promise.reject(new Error('waitForSelectionSync: não implementado (etapa 7.1)'));
+  return new Promise((resolve) => {
+    const done = () => {
+      clearTimeout(timer);
+      doc.removeEventListener('selectionchange', done);
+      resolve();
+    };
+    const timer = setTimeout(done, timeoutMs);
+    doc.addEventListener('selectionchange', done);
+  });
 }
 
 // -----------------------------------------------------------------------------
@@ -103,7 +113,11 @@ function trySelect(element: HTMLInputElement | HTMLTextAreaElement, start: numbe
 // contenteditable
 // -----------------------------------------------------------------------------
 
-function replaceInContentEditable(host: HTMLElement, length: number, text: string): InsertMethod | null {
+async function replaceInContentEditable(
+  host: HTMLElement,
+  length: number,
+  text: string,
+): Promise<InsertMethod | null> {
   const doc = host.ownerDocument;
   const range = rangeBeforeCaret(host, length);
   const selection = getSelectionFor(host);
@@ -111,6 +125,16 @@ function replaceInContentEditable(host: HTMLElement, length: number, text: strin
 
   selection.removeAllRanges();
   selection.addRange(range);
+
+  // Editor com modelo próprio: colagem sintética (se o editor tratar o evento).
+  if (detectRichEditor(host)) {
+    await waitForSelectionSync(doc);
+    if (dispatchSyntheticPaste(selection, host, text)) return 'paste';
+    // O editor não tratou a colagem: o atalho continua selecionado e seguimos.
+    selection.removeAllRanges();
+    selection.addRange(range);
+  }
+
   if (execInsertText(doc, text)) return 'execCommand';
 
   // Plano B: apaga o atalho e insere o texto como nós de TEXTO (nunca HTML),
@@ -137,6 +161,32 @@ function replaceInContentEditable(host: HTMLElement, length: number, text: strin
 }
 
 // -----------------------------------------------------------------------------
+
+/**
+ * Dispara um evento "paste" com o texto, como se o usuário tivesse colado.
+ * Só vai TEXTO PURO (text/plain), nunca HTML. Devolve true se o editor tratou
+ * a colagem (ele chama preventDefault() quando insere o texto por conta própria).
+ */
+function dispatchSyntheticPaste(selection: Selection, host: HTMLElement, text: string): boolean {
+  if (typeof DataTransfer !== 'function') return false;
+  const data = new DataTransfer();
+  data.setData('text/plain', text);
+
+  let event: Event;
+  try {
+    event = new ClipboardEvent('paste', { clipboardData: data, bubbles: true, cancelable: true });
+  } catch {
+    // Ambientes sem ClipboardEvent completo: um Event comum com clipboardData.
+    event = new Event('paste', { bubbles: true, cancelable: true });
+    Object.defineProperty(event, 'clipboardData', { value: data });
+  }
+
+  // Dispara no elemento onde está a seleção, para "subir" por todo o editor.
+  const anchor = selection.anchorNode;
+  const target = anchor instanceof Element ? anchor : (anchor?.parentElement ?? host);
+  target.dispatchEvent(event);
+  return event.defaultPrevented;
+}
 
 /** Tenta o execCommand('insertText'). O jsdom (testes) nem tem execCommand. */
 function execInsertText(doc: Document, text: string): boolean {

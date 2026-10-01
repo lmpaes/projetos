@@ -12,6 +12,14 @@ const BLOCK_TAGS = new Set([
   'TR', 'UL',
 ]);
 
+/**
+ * Caracteres invisíveis que alguns editores colocam no texto: o CKEditor 5 usa
+ * \u2060 (WORD JOINER) como "preenchimento"; outros usam \u200B e \uFEFF.
+ * Eles não fazem parte do que o usuário digitou, então não contam no atalho.
+ */
+const INVISIBLE_CHARS = /[\u200B\u2060\uFEFF]/g;
+const isInvisible = (char: string | undefined) => char === '\u200B' || char === '\u2060' || char === '\uFEFF';
+
 /** Um nó de texto e até onde ele conta (o último vai só até o cursor). */
 interface Segment {
   node: Text;
@@ -31,7 +39,10 @@ export function readTextBeforeCaret(target: EditableTarget, maxLength: number): 
 
   const segments = segmentsBeforeCaret(target.element);
   if (!segments) return null;
-  const text = segments.map((segment) => segment.node.data.slice(0, segment.end)).join('');
+  const text = segments
+    .map((segment) => segment.node.data.slice(0, segment.end))
+    .join('')
+    .replace(INVISIBLE_CHARS, '');
   return text.slice(Math.max(0, text.length - maxLength));
 }
 
@@ -65,15 +76,18 @@ export function rangeBeforeCaret(host: HTMLElement, length: number): Range | nul
   const range = host.ownerDocument.createRange();
   range.setEnd(last.node, last.end);
   let remaining = length;
-  // Anda de trás para frente, nó por nó, até juntar `length` caracteres.
+  // Anda de trás para frente, caractere por caractere (e nó por nó), até
+  // juntar `length` caracteres visíveis. Os invisíveis no meio entram no Range.
   for (let i = segments.length - 1; i >= 0; i--) {
     const segment = segments[i];
     if (!segment) continue;
-    if (segment.end >= remaining) {
-      range.setStart(segment.node, segment.end - remaining);
-      return range;
+    for (let offset = segment.end; offset > 0; offset--) {
+      if (!isInvisible(segment.node.data[offset - 1])) remaining--;
+      if (remaining === 0) {
+        range.setStart(segment.node, offset - 1);
+        return range;
+      }
     }
-    remaining -= segment.end;
   }
   return null;
 }

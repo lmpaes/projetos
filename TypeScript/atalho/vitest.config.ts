@@ -9,6 +9,8 @@ export default defineConfig({
     // jsdom simula document, window, Range, Selection... dentro do Node.
     environment: 'jsdom',
     include: ['tests/**/*.test.ts'],
+    // Completa o que falta no jsdom (ex.: DataTransfer). Ver tests/setup.ts.
+    setupFiles: ['tests/setup.ts'],
     // Desfaz mocks entre testes para um teste não "vazar" no outro.
     restoreMocks: true,
   },

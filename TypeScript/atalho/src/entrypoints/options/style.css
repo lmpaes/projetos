@@ -333,3 +333,15 @@ details.panel summary {
   margin: 0.15rem 0 0;
   color: var(--muted);
 }
+
+.settings .checkbox {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-start;
+  margin-top: 0.75rem;
+}
+
+.settings .checkbox input {
+  width: auto;
+  margin-top: 0.3rem;
+}
