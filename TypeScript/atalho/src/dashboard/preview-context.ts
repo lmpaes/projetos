@@ -26,9 +26,19 @@ export const DEFAULT_PREVIEW_PAGE: PreviewPage = {
   clipboard: 'texto copiado de exemplo',
 };
 
-/** ETAPA 7 (TDD): ainda não implementado. */
+/**
+ * Monta o RenderContext do preview a partir da página de teste.
+ *
+ * O HTML é lido pelo DOMParser: ele cria um documento "de mentira", que NÃO
+ * executa scripts nem carrega imagens. Por isso é seguro colar aqui o HTML de
+ * qualquer página para testar seletores.
+ */
 export function createPreviewContext(page: PreviewPage, now: () => Date = () => new Date()): RenderContext {
-  void page;
-  void now;
-  throw new Error('createPreviewContext: não implementado (etapa 7)');
+  const doc = new DOMParser().parseFromString(page.html, 'text/html');
+  if (page.title !== '') doc.title = page.title;
+  return {
+    page: { url: page.url, document: doc, selection: () => page.selection },
+    clipboard: () => Promise.resolve(page.clipboard),
+    now,
+  };
 }

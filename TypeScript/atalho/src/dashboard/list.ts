@@ -1,29 +1,46 @@
+// Funções puras da lista do dashboard: ordenar, buscar e detectar alterações.
 import type { Snippet, SnippetInput } from '@/shared/types';
 
 export const EMPTY_DRAFT: SnippetInput = { name: '', shortcut: '', content: '' };
 
-/** ETAPA 7 (TDD): ainda não implementado. */
+/** Compara textos como um dicionário em português ("água" vem antes de "Assinatura"). */
+const collator = new Intl.Collator('pt-BR', { sensitivity: 'base', numeric: true });
+
+/** Cópia da lista ordenada por nome (e por atalho, em caso de empate). */
 export function sortSnippets(snippets: readonly Snippet[]): Snippet[] {
-  void snippets;
-  throw new Error('sortSnippets: não implementado (etapa 7)');
+  return [...snippets].sort(
+    (a, b) => collator.compare(a.name, b.name) || collator.compare(a.shortcut, b.shortcut),
+  );
 }
 
-/** ETAPA 7 (TDD): ainda não implementado. */
+/** Remove acentos e maiúsculas: "Olá" → "ola". */
+function normalizeForSearch(text: string): string {
+  return text.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
+}
+
+/** Snippets cujo nome, atalho ou conteúdo contém a busca. */
 export function filterSnippets(snippets: readonly Snippet[], query: string): Snippet[] {
-  void snippets;
-  void query;
-  throw new Error('filterSnippets: não implementado (etapa 7)');
+  const needle = normalizeForSearch(query.trim());
+  if (needle === '') return [...snippets];
+  return snippets.filter((snippet) =>
+    [snippet.name, snippet.shortcut, snippet.content].some((field) =>
+      normalizeForSearch(field).includes(needle),
+    ),
+  );
 }
 
-/** ETAPA 7 (TDD): ainda não implementado. */
+/** Campos editáveis de um snippet (ou vazios, para um snippet novo). */
 export function draftFrom(snippet: Snippet | null): SnippetInput {
-  void snippet;
-  throw new Error('draftFrom: não implementado (etapa 7)');
+  return snippet
+    ? { name: snippet.name, shortcut: snippet.shortcut, content: snippet.content }
+    : { ...EMPTY_DRAFT };
 }
 
-/** ETAPA 7 (TDD): ainda não implementado. */
+/** O formulário tem alterações que ainda não foram salvas? */
 export function isDirty(draft: SnippetInput, baseline: SnippetInput): boolean {
-  void draft;
-  void baseline;
-  throw new Error('isDirty: não implementado (etapa 7)');
+  return (
+    draft.name !== baseline.name ||
+    draft.shortcut !== baseline.shortcut ||
+    draft.content !== baseline.content
+  );
 }
