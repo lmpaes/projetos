@@ -12,6 +12,7 @@ import {
   updateSnippet,
   watchSnippets,
 } from '@/storage/snippets';
+import { debugModeItem } from '@/storage/settings';
 
 void initDashboard(document, {
   store: {
@@ -22,6 +23,10 @@ void initDashboard(document, {
     watch: watchSnippets,
     exportBackup: () => exportBackup(),
     importBackup: (items, mode) => importBackup(items, mode),
+  },
+  settings: {
+    getDebugMode: () => debugModeItem.getValue(),
+    setDebugMode: (enabled) => debugModeItem.setValue(enabled),
   },
   engine: createDefaultEngine(),
   confirm: (message) => window.confirm(message),

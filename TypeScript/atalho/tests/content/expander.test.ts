@@ -96,6 +96,76 @@ describe('expansão', () => {
   });
 });
 
+describe('editores que não disparam "input" (ex.: alguns casos de CKEditor/Slate/Lexical)', () => {
+  /** Simula um editor que muda o texto sozinho e o navegador só manda o keyup. */
+  function typeWithoutInput(element: HTMLTextAreaElement, text: string, init: KeyboardEventInit = {}) {
+    element.value += text;
+    element.setSelectionRange(element.value.length, element.value.length);
+    element.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true, composed: true, key: text.slice(-1), ...init }));
+  }
+
+  it('expande pelo keyup', async () => {
+    setup([sig]);
+    const element = textarea('');
+    typeWithoutInput(element, 'Oi /sig');
+    await vi.waitFor(() => expect(element.value).toBe('Oi Att, Leo'));
+  });
+
+  it('keyup com Ctrl ou de teclas especiais é ignorado', async () => {
+    setup([sig]);
+    const element = textarea('');
+    typeWithoutInput(element, '/sig', { ctrlKey: true });
+    element.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true, key: 'Shift' }));
+    await settle();
+    expect(element.value).toBe('/sig');
+  });
+
+  it('input + keyup da mesma tecla: expande uma vez só', async () => {
+    const render = vi.fn((content: string) => renderTemplate(content, engine, makeContext()));
+    setup([sig], { render });
+    const element = textarea('');
+    typeInto(element, 'Oi /sig');
+    element.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true, key: 'g' }));
+    await vi.waitFor(() => expect(element.value).toBe('Oi Att, Leo'));
+    await settle();
+    element.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true, key: 'g' }));
+    await settle();
+    expect(render).toHaveBeenCalledTimes(1);
+    expect(element.value).toBe('Oi Att, Leo');
+  });
+
+  it('keyup falso (disparado por script) é ignorado', async () => {
+    setup([sig], { isTrusted: undefined });
+    const element = textarea('');
+    typeWithoutInput(element, '/sig');
+    await settle();
+    expect(element.value).toBe('/sig');
+  });
+});
+
+describe('modo diagnóstico', () => {
+  it('registra os passos da expansão', async () => {
+    const log = vi.fn();
+    setup([sig], { log });
+    const element = textarea('');
+    typeInto(element, '/sig');
+    await vi.waitFor(() => expect(element.value).toBe('Att, Leo'));
+    const messages = log.mock.calls.map(([message]) => String(message));
+    expect(messages).toContain('atalho encontrado');
+    expect(messages.some((message) => message.startsWith('inserido'))).toBe(true);
+  });
+
+  it('registra quando o campo não é editável', async () => {
+    const log = vi.fn();
+    setup([sig], { log });
+    const div = document.createElement('div');
+    document.body.append(div);
+    div.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: 'g' }));
+    await settle();
+    expect(log).toHaveBeenCalledWith('campo não editável', expect.anything());
+  });
+});
+
 describe('quando NÃO expandir', () => {
   it('eventos falsos (disparados por scripts da página) são ignorados', async () => {
     setup([sig], { isTrusted: undefined }); // usa o padrão: event.isTrusted

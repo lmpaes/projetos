@@ -36,6 +36,11 @@ export interface DashboardDeps {
     exportBackup(): Promise<BackupFile>;
     importBackup(items: readonly ImportedSnippet[], mode: ImportMode): Promise<ImportReport>;
   };
+  /** Configurações da extensão (hoje: só o modo diagnóstico). */
+  settings: {
+    getDebugMode(): Promise<boolean>;
+    setDebugMode(enabled: boolean): Promise<void>;
+  };
   engine: EngineRegistry;
   /** Pergunta sim/não ao usuário (window.confirm no navegador). */
   confirm(message: string): boolean;

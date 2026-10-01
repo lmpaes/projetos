@@ -71,6 +71,24 @@ describe('readTextBeforeCaret — contenteditable', () => {
   });
 });
 
+describe('caracteres invisíveis (o CKEditor 5 usa \u2060 como "preenchimento")', () => {
+  it('são ignorados ao ler o texto antes do cursor', () => {
+    const host = editable('Oi \u2060\u2060\u2060/atd');
+    caretAtEnd(host);
+    expect(readTextBeforeCaret({ kind: 'contenteditable', element: host }, 50)).toBe('Oi /atd');
+    expect(readTextBeforeCaret({ kind: 'contenteditable', element: host }, 4)).toBe('/atd');
+  });
+
+  it('não contam no tamanho do atalho ao selecionar para trocar', () => {
+    const host = editable('Oi /a\u2060td');
+    caretAtEnd(host);
+    const range = rangeBeforeCaret(host, 4);
+    expect(range?.toString()).toBe('/a\u2060td');
+    range?.deleteContents();
+    expect(host.textContent).toBe('Oi ');
+  });
+});
+
 describe('rangeBeforeCaret', () => {
   it('cobre exatamente os últimos N caracteres, mesmo entre elementos', () => {
     const host = editable('Olá <b>/s</b>ig');

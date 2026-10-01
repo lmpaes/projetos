@@ -5,6 +5,7 @@
 
 import type { RenderError, RenderResult } from '@/engine';
 import type { Snippet } from '@/shared/types';
+import type { DiagnosticLog } from './diagnostics';
 import { readTextBeforeCaret } from './caret';
 import { findEditableTarget } from './editable';
 import { replaceBeforeCaret } from './insert';
@@ -17,6 +18,8 @@ export interface ExpanderOptions {
   render(content: string): Promise<RenderResult>;
   /** Chamado quando a expansão teve erros (para mostrar o aviso na página). */
   onErrors?(errors: RenderError[], snippet: Snippet): void;
+  /** Registro dos passos (modo diagnóstico). Padrão: não registra nada. */
+  log?: DiagnosticLog;
   /**
    * Decide se o evento veio do usuário. Padrão: event.isTrusted.
    * Só os testes trocam isso (o jsdom não gera eventos "confiáveis").
@@ -74,7 +77,7 @@ export function attachExpander(doc: Document, options: ExpanderOptions): () => v
 
       inserting = true;
       try {
-        replaceBeforeCaret(editable, snippet.shortcut.length, result.text);
+        await replaceBeforeCaret(editable, snippet.shortcut.length, result.text);
       } finally {
         inserting = false;
       }

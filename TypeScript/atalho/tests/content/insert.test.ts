@@ -2,7 +2,7 @@
 import { act, createElement, useState, type ChangeEvent } from 'react';
 import { createRoot } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { replaceBeforeCaret } from '@/content/insert';
+import { replaceBeforeCaret, waitForSelectionSync } from '@/content/insert';
 import { caretAtEnd, editable, input, mockExecCommand, resetDom, textarea, textUntilCaret } from './dom';
 
 afterEach(resetDom);
@@ -16,17 +16,17 @@ function recordEvents(element: Element): string[] {
 }
 
 describe('input e textarea', () => {
-  it('sem execCommand (plano B): troca o atalho, posiciona o cursor e avisa a página', () => {
+  it('sem execCommand (plano B): troca o atalho, posiciona o cursor e avisa a página', async () => {
     const element = textarea('Oi /sig!', 7);
     const events = recordEvents(element);
 
-    expect(replaceBeforeCaret({ kind: 'text-control', element }, 4, 'Att, Leo')).toBe('fallback');
+    expect(await replaceBeforeCaret({ kind: 'text-control', element }, 4, 'Att, Leo')).toBe('fallback');
     expect(element.value).toBe('Oi Att, Leo!');
     expect([element.selectionStart, element.selectionEnd]).toEqual([11, 11]);
     expect(events).toEqual(['input:insertText', 'change']);
   });
 
-  it('com execCommand (caminho principal): seleciona o atalho e manda "insertText"', () => {
+  it('com execCommand (caminho principal): seleciona o atalho e manda "insertText"', async () => {
     const element = textarea('Oi /sig!', 7);
     const calls: Array<{ command: string; value: string; selected: string }> = [];
     mockExecCommand((command, _showUI, value) => {
@@ -35,33 +35,33 @@ describe('input e textarea', () => {
       return true;
     });
 
-    expect(replaceBeforeCaret({ kind: 'text-control', element }, 4, 'Att, Leo')).toBe('execCommand');
+    expect(await replaceBeforeCaret({ kind: 'text-control', element }, 4, 'Att, Leo')).toBe('execCommand');
     expect(calls).toEqual([{ command: 'insertText', value: 'Att, Leo', selected: '/sig' }]);
     expect(element.value).toBe('Oi Att, Leo!');
   });
 
-  it('se o execCommand recusar, usa o plano B', () => {
+  it('se o execCommand recusar, usa o plano B', async () => {
     const element = textarea('Oi /sig');
     mockExecCommand(() => false);
-    expect(replaceBeforeCaret({ kind: 'text-control', element }, 4, 'Att, Leo')).toBe('fallback');
+    expect(await replaceBeforeCaret({ kind: 'text-control', element }, 4, 'Att, Leo')).toBe('fallback');
     expect(element.value).toBe('Oi Att, Leo');
   });
 
-  it('textarea mantém as quebras de linha', () => {
+  it('textarea mantém as quebras de linha', async () => {
     const element = textarea('/sig');
-    replaceBeforeCaret({ kind: 'text-control', element }, 4, 'Att,\nLeo');
+    await replaceBeforeCaret({ kind: 'text-control', element }, 4, 'Att,\nLeo');
     expect(element.value).toBe('Att,\nLeo');
   });
 
-  it('input de uma linha troca quebras de linha por espaço', () => {
+  it('input de uma linha troca quebras de linha por espaço', async () => {
     const element = input('text', 'a /sig');
-    replaceBeforeCaret({ kind: 'text-control', element }, 4, 'Linha 1\nLinha 2');
+    await replaceBeforeCaret({ kind: 'text-control', element }, 4, 'Linha 1\nLinha 2');
     expect(element.value).toBe('a Linha 1 Linha 2');
   });
 
-  it('input de e-mail (sem API de seleção) também funciona', () => {
+  it('input de e-mail (sem API de seleção) também funciona', async () => {
     const element = input('email', 'eu/em');
-    replaceBeforeCaret({ kind: 'text-control', element }, 3, '@exemplo.com');
+    await replaceBeforeCaret({ kind: 'text-control', element }, 3, '@exemplo.com');
     expect(element.value).toBe('eu@exemplo.com');
   });
 });
@@ -114,7 +114,7 @@ describe('input controlado por React', () => {
     await typeLikeUser(element, 'Oi /sig');
     expect(onValue).toHaveBeenLastCalledWith('Oi /sig');
 
-    await actAndWait(() => replaceBeforeCaret({ kind: 'text-control', element }, 4, 'Att, Leo'));
+    await actAndWait(() => void replaceBeforeCaret({ kind: 'text-control', element }, 4, 'Att, Leo'));
 
     expect(onValue).toHaveBeenLastCalledWith('Oi Att, Leo');
     expect(element.value).toBe('Oi Att, Leo');
@@ -134,33 +134,33 @@ describe('input controlado por React', () => {
 });
 
 describe('contenteditable (ex.: Gmail)', () => {
-  it('plano B: troca o atalho, quebra linhas com <br> e deixa o cursor no fim', () => {
+  it('plano B: troca o atalho, quebra linhas com <br> e deixa o cursor no fim', async () => {
     const host = editable('Olá /sig');
     caretAtEnd(host);
     const events = recordEvents(host);
 
-    expect(replaceBeforeCaret({ kind: 'contenteditable', element: host }, 4, 'Att,\nLeo')).toBe('fallback');
+    expect(await replaceBeforeCaret({ kind: 'contenteditable', element: host }, 4, 'Att,\nLeo')).toBe('fallback');
     expect(host.innerHTML).toBe('Olá Att,<br>Leo');
     expect(textUntilCaret(host)).toBe('Olá Att,Leo');
     expect(events).toEqual(['input:insertText']);
   });
 
-  it('atalho quebrado em formatação ("Olá <b>/s</b>ig")', () => {
+  it('atalho quebrado em formatação ("Olá <b>/s</b>ig")', async () => {
     const host = editable('Olá <b>/s</b>ig');
     caretAtEnd(host);
-    replaceBeforeCaret({ kind: 'contenteditable', element: host }, 4, 'Att, Leo');
+    await replaceBeforeCaret({ kind: 'contenteditable', element: host }, 4, 'Att, Leo');
     expect(host.textContent).toBe('Olá Att, Leo');
   });
 
-  it('texto do snippet entra como TEXTO, nunca como HTML', () => {
+  it('texto do snippet entra como TEXTO, nunca como HTML', async () => {
     const host = editable('/sig');
     caretAtEnd(host);
-    replaceBeforeCaret({ kind: 'contenteditable', element: host }, 4, '<img src=x onerror=alert(1)>');
+    await replaceBeforeCaret({ kind: 'contenteditable', element: host }, 4, '<img src=x onerror=alert(1)>');
     expect(host.querySelector('img')).toBeNull();
     expect(host.textContent).toBe('<img src=x onerror=alert(1)>');
   });
 
-  it('com execCommand: seleciona o atalho e manda "insertText"', () => {
+  it('com execCommand: seleciona o atalho e manda "insertText"', async () => {
     const host = editable('Olá /sig');
     caretAtEnd(host);
     const selected: string[] = [];
@@ -168,8 +168,75 @@ describe('contenteditable (ex.: Gmail)', () => {
       selected.push(document.getSelection()?.toString() ?? '');
       return true;
     });
-    expect(replaceBeforeCaret({ kind: 'contenteditable', element: host }, 4, 'Att, Leo')).toBe('execCommand');
+    expect(await replaceBeforeCaret({ kind: 'contenteditable', element: host }, 4, 'Att, Leo')).toBe('execCommand');
     expect(exec).toHaveBeenCalledWith('insertText', false, 'Att, Leo');
     expect(selected).toEqual(['/sig']);
+  });
+});
+
+describe('editores com modelo próprio (ex.: Zendesk/CKEditor 5)', () => {
+  /** Editor falso que, como o CKEditor 5, só aceita texto pela colagem (paste). */
+  function fakeRichEditor(html: string, { handlesPaste = true } = {}) {
+    const host = editable(html);
+    host.classList.add('ck-editor__editable');
+    const pasted: Array<{ text: string; html: string }> = [];
+    host.addEventListener('paste', (event) => {
+      if (!handlesPaste) return;
+      event.preventDefault();
+      const data = (event).clipboardData;
+      const text = data?.getData('text/plain') ?? '';
+      pasted.push({ text, html: data?.getData('text/html') ?? '' });
+      const range = document.getSelection()?.getRangeAt(0);
+      range?.deleteContents();
+      range?.insertNode(document.createTextNode(text));
+    });
+    return { host, pasted };
+  }
+
+  it('insere por "colagem" sintética, substituindo o atalho', async () => {
+    const { host, pasted } = fakeRichEditor('Oi /atd');
+    caretAtEnd(host);
+    expect(await replaceBeforeCaret({ kind: 'contenteditable', element: host }, 4, 'Olá, tudo bem?')).toBe('paste');
+    expect(host.textContent).toBe('Oi Olá, tudo bem?');
+    expect(pasted.map((p) => p.text)).toEqual(['Olá, tudo bem?']);
+  });
+
+  it('a colagem leva só texto puro (nunca HTML)', async () => {
+    const { host, pasted } = fakeRichEditor('/atd');
+    caretAtEnd(host);
+    await replaceBeforeCaret({ kind: 'contenteditable', element: host }, 4, '<b>negrito?</b>');
+    expect(pasted).toEqual([{ text: '<b>negrito?</b>', html: '' }]);
+  });
+
+  it('se o editor não tratar a colagem, segue o caminho normal', async () => {
+    const { host } = fakeRichEditor('Oi /atd', { handlesPaste: false });
+    caretAtEnd(host);
+    expect(await replaceBeforeCaret({ kind: 'contenteditable', element: host }, 4, 'Olá')).toBe('fallback');
+    expect(host.textContent).toBe('Oi Olá');
+  });
+
+  it('contenteditable comum (ex.: Gmail) continua no caminho de sempre, sem colagem', async () => {
+    const host = editable('Oi /atd');
+    caretAtEnd(host);
+    const onPaste = vi.fn();
+    host.addEventListener('paste', onPaste);
+    expect(await replaceBeforeCaret({ kind: 'contenteditable', element: host }, 4, 'Olá')).toBe('fallback');
+    expect(onPaste).not.toHaveBeenCalled();
+  });
+});
+
+describe('waitForSelectionSync', () => {
+  it('termina quando a página avisa que a seleção mudou', async () => {
+    const waiting = waitForSelectionSync(document, 10_000);
+    document.dispatchEvent(new Event('selectionchange'));
+    await expect(waiting).resolves.toBeUndefined();
+  });
+
+  it('sem aviso, termina sozinho depois do tempo limite', async () => {
+    vi.useFakeTimers();
+    const waiting = waitForSelectionSync(document, 50);
+    vi.advanceTimersByTime(50);
+    await expect(waiting).resolves.toBeUndefined();
+    vi.useRealTimers();
   });
 });

@@ -14,17 +14,30 @@
 import { getSelectionFor, rangeBeforeCaret, textControlCaret } from './caret';
 import type { EditableTarget } from './editable';
 
-/** Como o texto foi inserido: pelo caminho principal ou pelo plano B. */
-export type InsertMethod = 'execCommand' | 'fallback';
+/** Como o texto foi inserido: colagem sintética, caminho principal ou plano B. */
+export type InsertMethod = 'paste' | 'execCommand' | 'fallback';
 
 /**
  * Substitui os `length` caracteres antes do cursor por `text`.
  * Devolve null se não conseguiu achar o trecho (o cursor saiu do lugar).
  */
-export function replaceBeforeCaret(target: EditableTarget, length: number, text: string): InsertMethod | null {
-  return target.kind === 'text-control'
-    ? replaceInTextControl(target.element, length, text)
-    : replaceInContentEditable(target.element, length, text);
+export function replaceBeforeCaret(
+  target: EditableTarget,
+  length: number,
+  text: string,
+): Promise<InsertMethod | null> {
+  return Promise.resolve(
+    target.kind === 'text-control'
+      ? replaceInTextControl(target.element, length, text)
+      : replaceInContentEditable(target.element, length, text),
+  );
+}
+
+/** ETAPA 7.1 (TDD): ainda não implementado. */
+export function waitForSelectionSync(doc: Document, timeoutMs = 50): Promise<void> {
+  void doc;
+  void timeoutMs;
+  return Promise.reject(new Error('waitForSelectionSync: não implementado (etapa 7.1)'));
 }
 
 // -----------------------------------------------------------------------------

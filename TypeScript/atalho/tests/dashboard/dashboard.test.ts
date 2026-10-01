@@ -39,6 +39,7 @@ async function mount(overrides: Partial<DashboardDeps> = {}) {
   document.body.innerHTML = BODY;
   const confirm = vi.fn<(message: string) => boolean>(() => true);
   const download = vi.fn<(filename: string, text: string) => void>();
+  const setDebugMode = vi.fn<(enabled: boolean) => Promise<void>>(() => Promise.resolve());
   handle = await initDashboard(document, {
     store: {
       list: listSnippets,
@@ -49,6 +50,7 @@ async function mount(overrides: Partial<DashboardDeps> = {}) {
       exportBackup: () => exportBackup(new Date(2026, 9, 1)),
       importBackup,
     },
+    settings: { getDebugMode: () => Promise.resolve(false), setDebugMode },
     engine: createDefaultEngine(),
     confirm,
     download,
@@ -56,7 +58,7 @@ async function mount(overrides: Partial<DashboardDeps> = {}) {
     previewDelayMs: 0,
     ...overrides,
   });
-  return { confirm, download };
+  return { confirm, download, setDebugMode };
 }
 
 // --- Atalhos para mexer na tela -------------------------------------------
@@ -265,6 +267,21 @@ describe('preview ao vivo', () => {
     await mount();
     expect(field('test-url').value).toContain('id=123');
     expect(field('test-html').value).toContain('Maria Silva');
+  });
+});
+
+describe('configurações', () => {
+  it('o modo diagnóstico começa como estava salvo', async () => {
+    await mount({ settings: { getDebugMode: () => Promise.resolve(true), setDebugMode: () => Promise.resolve() } });
+    expect($<HTMLInputElement>('debug-mode').checked).toBe(true);
+  });
+
+  it('ligar/desligar salva a configuração', async () => {
+    const { setDebugMode } = await mount();
+    expect($<HTMLInputElement>('debug-mode').checked).toBe(false);
+    click('debug-mode');
+    await vi.waitFor(() => expect(setDebugMode).toHaveBeenCalledWith(true));
+    expect(text('status')).toContain('Modo diagnóstico ligado');
   });
 });
 
