@@ -1,12 +1,23 @@
+// =============================================================================
+// CRUD de snippets no chrome.storage.local.
+// -----------------------------------------------------------------------------
+// Usamos o "storage item" do WXT: uma chave tipada ("local:snippets") com valor
+// padrão e número de versão (para migrar o formato no futuro, se precisar).
+// =============================================================================
+
 import { storage } from 'wxt/utils/storage';
 import type { Snippet, SnippetInput } from '@/shared/types';
-import type { BackupFile, ImportedSnippet, ImportMode, ImportReport } from './backup';
-import type { ValidationIssue } from './validation';
+import {
+  createBackup,
+  planImport,
+  type BackupFile,
+  type ImportedSnippet,
+  type ImportMode,
+  type ImportReport,
+} from './backup';
+import { validateSnippet, type ValidationIssue } from './validation';
 
-/**
- * Onde os snippets ficam: chrome.storage.local, na chave "snippets".
- * `version` permite migrar o formato no futuro sem perder dados.
- */
+/** Onde os snippets ficam: chrome.storage.local, chave "snippets". */
 export const snippetsItem = storage.defineItem<Snippet[]>('local:snippets', {
   fallback: [],
   version: 1,
@@ -22,54 +33,86 @@ export type SaveResult =
   | { ok: true; snippet: Snippet; warnings: ValidationIssue[] }
   | { ok: false; errors: ValidationIssue[]; warnings: ValidationIssue[] };
 
-const notImplemented = (name: string) => Promise.reject(new Error(`${name}: não implementado (etapa 5)`));
+function resolveOptions(options: StoreOptions): Required<StoreOptions> {
+  return {
+    now: options.now ?? (() => Date.now()),
+    newId: options.newId ?? (() => crypto.randomUUID()),
+  };
+}
 
-/** ETAPA 5 (TDD): ainda não implementado. */
+/** Espaços nas pontas do nome e do atalho não fazem parte deles. */
+function normalize(input: SnippetInput): SnippetInput {
+  return { name: input.name.trim(), shortcut: input.shortcut.trim(), content: input.content };
+}
+
 export function listSnippets(): Promise<Snippet[]> {
-  return notImplemented('listSnippets');
+  return snippetsItem.getValue();
 }
 
-/** ETAPA 5 (TDD): ainda não implementado. */
-export function createSnippet(input: SnippetInput, options: StoreOptions = {}): Promise<SaveResult> {
-  void input;
-  void options;
-  return notImplemented('createSnippet');
+export async function createSnippet(input: SnippetInput, options: StoreOptions = {}): Promise<SaveResult> {
+  const { now, newId } = resolveOptions(options);
+  const snippets = await listSnippets();
+
+  const { errors, warnings } = validateSnippet(input, snippets);
+  if (errors.length > 0) return { ok: false, errors, warnings };
+
+  const timestamp = now();
+  const snippet: Snippet = { id: newId(), ...normalize(input), createdAt: timestamp, updatedAt: timestamp };
+  await snippetsItem.setValue([...snippets, snippet]);
+  return { ok: true, snippet, warnings };
 }
 
-/** ETAPA 5 (TDD): ainda não implementado. */
-export function updateSnippet(id: string, input: SnippetInput, options: StoreOptions = {}): Promise<SaveResult> {
-  void id;
-  void input;
-  void options;
-  return notImplemented('updateSnippet');
+export async function updateSnippet(
+  id: string,
+  input: SnippetInput,
+  options: StoreOptions = {},
+): Promise<SaveResult> {
+  const { now } = resolveOptions(options);
+  const snippets = await listSnippets();
+  const index = snippets.findIndex((snippet) => snippet.id === id);
+  const current = snippets[index];
+  if (!current) {
+    return {
+      ok: false,
+      errors: [{ field: 'general', message: 'Este snippet não existe mais (pode ter sido apagado em outra aba).' }],
+      warnings: [],
+    };
+  }
+
+  const { errors, warnings } = validateSnippet(input, snippets, id);
+  if (errors.length > 0) return { ok: false, errors, warnings };
+
+  const updated: Snippet = { ...current, ...normalize(input), updatedAt: now() };
+  const next = [...snippets];
+  next[index] = updated;
+  await snippetsItem.setValue(next);
+  return { ok: true, snippet: updated, warnings };
 }
 
-/** ETAPA 5 (TDD): ainda não implementado. */
-export function deleteSnippet(id: string): Promise<void> {
-  void id;
-  return notImplemented('deleteSnippet');
+export async function deleteSnippet(id: string): Promise<void> {
+  const snippets = await listSnippets();
+  await snippetsItem.setValue(snippets.filter((snippet) => snippet.id !== id));
 }
 
-/** ETAPA 5 (TDD): ainda não implementado. */
+/**
+ * Chama `callback` sempre que a lista mudar (em qualquer aba ou parte da
+ * extensão). Devolve a função que para de acompanhar.
+ */
 export function watchSnippets(callback: (snippets: Snippet[]) => void): () => void {
-  void callback;
-  throw new Error('watchSnippets: não implementado (etapa 5)');
+  return snippetsItem.watch((snippets) => callback(snippets));
 }
 
-/** ETAPA 5 (TDD): ainda não implementado. */
-export function exportBackup(now: Date = new Date()): Promise<BackupFile> {
-  void now;
-  return notImplemented('exportBackup');
+export async function exportBackup(now: Date = new Date()): Promise<BackupFile> {
+  return createBackup(await listSnippets(), now);
 }
 
-/** ETAPA 5 (TDD): ainda não implementado. */
-export function importBackup(
+export async function importBackup(
   items: readonly ImportedSnippet[],
   mode: ImportMode,
   options: StoreOptions = {},
 ): Promise<ImportReport> {
-  void items;
-  void mode;
-  void options;
-  return notImplemented('importBackup');
+  const { now, newId } = resolveOptions(options);
+  const { snippets, report } = planImport(await listSnippets(), items, mode, { now: now(), newId });
+  await snippetsItem.setValue(snippets);
+  return report;
 }

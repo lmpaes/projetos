@@ -16,6 +16,8 @@ export default defineConfig({
       'Digite um atalho (ex.: /sig) e ele vira o texto do snippet. Projeto de estudo.',
     // Permissões entram conforme as etapas precisarem delas (ver CLAUDE.md).
     permissions: [
+      // Guardar os snippets no chrome.storage.local.
+      'storage',
       // {clipboard}: ler a área de transferência (no content script e no offscreen).
       'clipboardRead',
       // Documento offscreen: plano B para ler o clipboard quando a página bloqueia.
