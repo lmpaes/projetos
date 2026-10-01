@@ -9,8 +9,19 @@ export interface ShortcutMatcher {
   match(textBeforeCaret: string): Snippet | null;
 }
 
-/** ETAPA 6 (TDD): ainda não implementado. */
+/**
+ * Prepara a busca de atalhos. Ordenamos do maior para o menor: assim, se
+ * existirem "ig" e "/sig", digitar "/sig" escolhe o "/sig".
+ */
 export function createMatcher(snippets: readonly Snippet[]): ShortcutMatcher {
-  void snippets;
-  throw new Error('createMatcher: não implementado (etapa 6)');
+  const sorted = snippets
+    .filter((snippet) => snippet.shortcut.length > 0)
+    .sort((a, b) => b.shortcut.length - a.shortcut.length);
+  const lastChars = new Set(sorted.map((snippet) => snippet.shortcut.slice(-1)));
+
+  return {
+    maxLength: sorted[0]?.shortcut.length ?? 0,
+    couldEndWith: (char) => lastChars.has(char),
+    match: (text) => sorted.find((snippet) => text.endsWith(snippet.shortcut)) ?? null,
+  };
 }
