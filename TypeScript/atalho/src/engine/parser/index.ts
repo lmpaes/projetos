@@ -3,3 +3,4 @@ export type * from './ast';
 export type { ArgKind, ArgSpec, BlockSpec, CommandSyntax, FunctionSyntax, SyntaxRegistry } from './syntax';
 export { createSyntaxRegistry } from './syntax';
 export { parseTemplate } from './parse-template';
+export { locate } from './errors';
