@@ -4,6 +4,7 @@
 // import de backup.
 // =============================================================================
 
+import { endsWithShortcut } from '@/shared/shortcut';
 import type { Snippet, SnippetInput } from '@/shared/types';
 
 export const NAME_MAX_LENGTH = 100;
@@ -77,14 +78,20 @@ function checkShortcutFormat(shortcut: string): string | null {
 }
 
 /**
- * A expansão acontece assim que o texto antes do cursor TERMINA com um atalho.
- * Então o atalho A "atropela" o B se A aparece dentro de B antes da última
- * letra: ao digitar B, em algum momento o texto termina com A e A dispara.
+ * A expansão acontece assim que o texto antes do cursor TERMINA com um atalho
+ * que está separado do que vem antes (regra em src/shared/shortcut.ts).
+ * Então o atalho A "atropela" o B se, ao digitar B do começo, o texto em algum
+ * momento (antes da última letra) termina com A separado:
  *   "/s"  atropela "/sig"  (ao digitar "/s", já expande)
+ *   "dt"  atropela "-dtx"  (em "-dt", o "dt" vem depois de "-", que separa)
+ *   "si"  NÃO atropela "/sig" (em "/si", o "si" está colado na "/")
  *   "ig"  NÃO atropela "/sig" (os dois terminam juntos; o mais longo vence)
  */
 function blocks(a: string, b: string): boolean {
-  return b.slice(0, -1).includes(a);
+  for (let typed = a.length; typed < b.length; typed++) {
+    if (endsWithShortcut(b.slice(0, typed), a)) return true;
+  }
+  return false;
 }
 
 function findPrefixConflicts(shortcut: string, others: readonly Snippet[]): ValidationIssue[] {

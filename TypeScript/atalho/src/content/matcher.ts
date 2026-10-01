@@ -1,11 +1,15 @@
+import { endsWithShortcut } from '@/shared/shortcut';
 import type { Snippet } from '@/shared/types';
 
 export interface ShortcutMatcher {
-  /** Quantos caracteres ler antes do cursor. STUB (etapa 8.1): ainda é só o maior atalho. */
+  /**
+   * Quantos caracteres ler antes do cursor: o maior atalho + 1. O caractere a
+   * mais é o que vem antes do atalho, para conferir se há separador.
+   */
   readonly contextLength: number;
   /** Algum atalho termina com este caractere? (filtro rápido a cada tecla) */
   couldEndWith(char: string): boolean;
-  /** Snippet cujo atalho termina exatamente no fim do texto (o mais longo vence). */
+  /** Snippet cujo atalho termina no fim do texto, separado do que vem antes (o mais longo vence). */
   match(textBeforeCaret: string): Snippet | null;
 }
 
@@ -18,10 +22,11 @@ export function createMatcher(snippets: readonly Snippet[]): ShortcutMatcher {
     .filter((snippet) => snippet.shortcut.length > 0)
     .sort((a, b) => b.shortcut.length - a.shortcut.length);
   const lastChars = new Set(sorted.map((snippet) => snippet.shortcut.slice(-1)));
+  const longest = sorted[0]?.shortcut.length ?? 0;
 
   return {
-    contextLength: sorted[0]?.shortcut.length ?? 0,
+    contextLength: longest === 0 ? 0 : longest + 1,
     couldEndWith: (char) => lastChars.has(char),
-    match: (text) => sorted.find((snippet) => text.endsWith(snippet.shortcut)) ?? null,
+    match: (text) => sorted.find((snippet) => endsWithShortcut(text, snippet.shortcut)) ?? null,
   };
 }

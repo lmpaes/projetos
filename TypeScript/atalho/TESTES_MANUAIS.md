@@ -39,17 +39,16 @@ caractere**, sem precisar de Espaço nem Enter. O **Ctrl+Z** desfaz a expansão 
   de **digitar com o teclado**, e não alterar o valor do campo por JavaScript. Se nada expandir
   quando o Claude digita, mas expandir quando **você** digita, a extensão está certa: anote
   "não expande com digitação automática" e siga.
-- As páginas `chrome://extensions` e o dashboard (`chrome-extension://...`) costumam ser
-  bloqueadas para automação. Faça a **Preparação** e o **Bloco C** você mesmo.
-- Prompt sugerido (copie e cole um bloco por vez):
-
-  ```text
-  Vou testar minha extensão de snippets "Atalho". Para cada caso abaixo: abra a página,
-  clique no campo indicado, digite o atalho como teclas reais (não cole e não use JavaScript),
-  espere 1 segundo e me diga exatamente o texto que ficou no campo e se apareceu algum aviso
-  no canto inferior direito da página. Compare com o "Esperado" e responda ✅ ou ❌ por caso.
-  [cole aqui os casos do bloco]
-  ```
+- O que fica **com você** (o Claude in Chrome não alcança):
+  - a **Preparação** e o **Bloco C**: `chrome://extensions`, o dashboard e a janela de escolher arquivo;
+  - o **A9**: o pedido de permissão do clipboard é do próprio Chrome;
+  - o **B1** e o **B3**: os campos ficam em iframes de outro domínio, onde a automação não consegue
+    digitar (as teclas vão para a página de fora);
+  - o **B2** e o `/atd` no **Zendesk**: são as suas contas.
+- Às vezes o Ctrl+A da automação deixa um "a" sobrando no campo. Isso vem da automação: o Atalho
+  ignora teclas com Ctrl. Por isso o prompt pede para conferir que o campo está vazio antes de digitar.
+- O prompt pronto (todo o resto, numa colagem só) está no
+  [fim deste arquivo](#apêndice-prompt-para-o-claude-in-chrome).
 
 ---
 
@@ -180,11 +179,18 @@ instructions** (a caixa grande, uma textarea).
 - **Ação:** apague a Delivery instructions e digite `/t-linhas`.
 - **Esperado:** as 3 linhas, com a data de hoje na última. O cursor fica no fim do texto.
 
+### A15. Atalho colado em outra palavra não expande
+O atalho só expande no início do campo ou da linha, ou depois de espaço ou pontuação. Colado em
+letra, número, `_`, `/` ou `\`, ele não expande. Assim, digitar um endereço como `site.com/pag...`
+não dispara o `/pag`.
+- **Ação:** apague a Delivery instructions e digite `abc/t-nome`. Depois apague e digite `(/t-nome`.
+- **Esperado:** `abc/t-nome` continua como está (não expande); `(/t-nome` vira `(Maria Silva`.
+
 ---
 
 ## Bloco B: outros tipos de campo e editores
 
-### B1. contenteditable simples (MDN)
+### B1. contenteditable simples (MDN), teste manual
 - **Página:** https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Global_attributes/contenteditable
   (se redirecionar para outro endereço do MDN, tudo bem).
 - **Snippet:** `/t-nome` e `/t-linhas`.
@@ -192,6 +198,8 @@ instructions** (a caixa grande, uma textarea).
   do texto da citação, digite um espaço e `/t-nome`. Depois aperte Enter e digite `/t-linhas`.
 - **Esperado:** `Maria Silva` no fim da citação e, abaixo, as 3 linhas do Teste 11.
 - **Se a página mudou** (sem exemplo editável): use o B2 (Gmail), que também é contenteditable.
+- **Manual:** o exemplo fica num iframe de outro domínio, onde o Claude in Chrome não consegue
+  digitar (o `/` acaba abrindo a busca do MDN).
 
 ### B2. Gmail (contenteditable de verdade)
 - **Página:** https://mail.google.com → **Escrever**.
@@ -201,7 +209,7 @@ instructions** (a caixa grande, uma textarea).
   3. No corpo, Ctrl+Z. **Esperado:** volta `/t-linhas`.
 - Não precisa enviar o e-mail: descarte o rascunho no fim.
 
-### B3. Input controlado pelo React
+### B3. Input controlado pelo React, teste manual
 - **Página:** https://react.dev/reference/react-dom/components/input
 - **Onde:** role até a seção **"Controlling an input with a state variable"**. O exemplo tem o campo
   **First name:** e, embaixo do código, um preview que mostra "Your name is ...".
@@ -216,14 +224,16 @@ instructions** (a caixa grande, uma textarea).
   conhecida, ver README).
 - **Se o preview não carregar:** clique no botão de recarregar do próprio sandbox ou role a página
   um pouco (ele carrega quando aparece na tela).
+- **Manual:** pelo mesmo motivo do B1, o Claude in Chrome não consegue digitar no preview.
 
 ### B4. Editor rico CKEditor 5 (o mesmo tipo do Zendesk)
-- **Página:** https://ckeditor.com/ckeditor-5/demo/ (qualquer editor de demonstração da página).
+- **Página:** https://ckeditor.com/ckeditor-5/demo/feature-rich/ (a página `/demo/` virou uma lista
+  de demonstrações; se este endereço mudar, abra qualquer demo dela que tenha um editor).
 - **Snippet:** `/t-linhas` e `/t-nome`
 - **Ação:** clique no fim de um parágrafo do editor, aperte Enter e digite `/t-linhas`. Depois,
   Ctrl+Z.
-- **Esperado:** as 3 linhas aparecem (podem virar 3 parágrafos, normal no CKEditor). O Ctrl+Z
-  devolve `/t-linhas`, sem apagar o resto do texto do editor.
+- **Esperado:** as 3 linhas aparecem, em 3 parágrafos ou num parágrafo com quebras de linha (os dois
+  são normais no CKEditor). O Ctrl+Z devolve `/t-linhas`, sem apagar o resto do texto do editor.
 - Se aparecer um menu ao digitar `/` (alguns demos têm "comandos de barra"), continue digitando: o
   atalho deve expandir mesmo assim.
 - **Teste real:** no **Zendesk**, numa resposta de ticket, o seu `/atd` (Etapa 7.1) deve continuar
@@ -343,6 +353,7 @@ Abra o dashboard pelo ícone do Atalho.
 | A12 input de e-mail | | |
 | A13 Ctrl+Z | | |
 | A14 várias linhas (textarea) | | |
+| A15 atalho colado não expande | | |
 | B1 contenteditable (MDN) | | |
 | B2 Gmail | | |
 | B3 React | | |
@@ -356,3 +367,100 @@ Abra o dashboard pelo ícone do Atalho.
 1. Ligue o **Modo diagnóstico** (C10), repita o caso com o **Console** aberto (F12).
 2. Copie as linhas `[Atalho]` do console e tire um print do campo e do aviso, se houver.
 3. Mande para o Claude com: o caso (ex.: B3), a página, o que você esperava e o que aconteceu.
+
+---
+
+## Apêndice: prompt para o Claude in Chrome
+
+Faça antes a **Preparação** (seção 0). Depois cole o bloco abaixo inteiro no Claude in Chrome e,
+quando ele terminar, faça à mão o que ficou de fora: A9, B1, B2, B3, `/atd` no Zendesk e bloco C.
+
+```text
+Você vai testar a minha extensão do Chrome "Atalho", um expansor de texto que eu desenvolvi.
+Ela já está instalada e com os snippets de teste importados. Quando alguém DIGITA um atalho
+(ex.: /t-nome) num campo de texto, a extensão troca o atalho por outro texto, sozinha, assim que
+o último caractere é digitado.
+
+REGRAS
+1. Trabalhe numa aba nova.
+2. Digite os atalhos com a ação de DIGITAR do teclado (teclas reais). NÃO cole, NÃO use
+   JavaScript e NÃO altere o valor do campo por código: a extensão ignora eventos sintéticos de
+   propósito (segurança).
+3. Antes de cada atalho, clique no campo, apague o conteúdo e CONFIRA QUE O CAMPO FICOU VAZIO
+   (às vezes o Ctrl+A deixa um "a" sobrando), a menos que o caso diga outra coisa.
+4. Depois de digitar, espere 2 segundos e leia o texto EXATO que ficou no campo, com as quebras
+   de linha.
+5. Nunca clique em "Submit order", "Login" ou qualquer botão que envie formulário. Não salve
+   nada em nenhum site.
+6. Se um caso não der para fazer (página fora do ar, campo não encontrado), marque ⚠️ com o
+   motivo e siga para o próximo.
+
+=== TESTE 0: SANIDADE (faça primeiro) ===
+Página: https://httpbin.org/forms/post?id=123&tab=x#detalhes
+Campo "Customer name". Digite: /t-nome
+Esperado: o campo mostra "Maria Silva".
+Se continuar "/t-nome", PARE e me responda só: "TESTE 0 FALHOU: não expandiu com digitação
+automática".
+
+=== BLOCO A: mesma página do httpbin ===
+Use o campo "Delivery instructions" (a caixa grande no fim do formulário), a menos que o caso diga
+outro.
+
+A1. Digite /t-partes. Esperado (7 linhas):
+url: https://httpbin.org/forms/post?id=123&tab=x#detalhes
+domain: httpbin.org
+path: /forms/post
+protocol: https
+query: ?id=123&tab=x
+hash: #detalhes
+title: (igual ao título da aba; vazio se a aba mostrar só o endereço)
+
+A2. Digite /t-seletor. Esperado: Pizza Size
+A3. Digite /t-lista. Esperado: Pizza Size, Pizza Toppings
+A4. Digite /t-id. Esperado: ID: 123
+A4b. Abra https://httpbin.org/forms/post?id=ABC-9&tab=x e digite /t-id na Delivery
+     instructions. Esperado: ID: ABC-9
+     Depois volte para https://httpbin.org/forms/post?id=123&tab=x#detalhes
+A5. Digite /t-var. Esperado: Pedido nº 123 em httpbin.org
+A6. Digite /t-erro e tire um print LOGO em seguida. Esperado:
+    - no campo: Antes [ERRO: {site}: nenhum elemento encontrado para o seletor ".nao-existe" (use catch() para definir um texto padrão)] depois
+    - no canto inferior direito da página, um aviso "Atalho: /t-erro foi expandido com 1 erro"
+      (ele some sozinho em ~8 segundos).
+A7. Digite /t-catch e tire um print. Esperado: Vendedor: Não encontrado, SEM aviso no canto.
+A8. Digite /t-hora. Esperado: a data e a hora de agora no formato
+    "DD/MM/AAAA às HH:mm (dia da semana em português)", ex.: 01/10/2026 às 14:30 (quinta-feira).
+A10. Dê um clique triplo no texto "Pizza Toppings" da página, para selecioná-lo. Depois clique
+     na Delivery instructions, apague o conteúdo e digite /t-selecao.
+     Esperado: Selecionado: Pizza Toppings (sem quebra de linha no fim)
+A12. Campo "E-mail address": digite /t-nome. Esperado: Maria Silva
+A13. Campo "Customer name": apague, digite /t-nome (vira Maria Silva) e aperte Ctrl+Z.
+     Esperado: o campo volta a mostrar /t-nome
+A14. Delivery instructions: digite /t-linhas. Esperado (3 linhas):
+     Olá!
+     Esta é a linha 2.
+     Data: <data de hoje, DD/MM/AAAA>
+A15. Delivery instructions: digite abc/t-nome. Esperado: continua "abc/t-nome" (NÃO expande, é
+     proposital: o atalho colado em outra palavra não dispara).
+     Depois apague e digite (/t-nome. Esperado: (Maria Silva
+
+=== BLOCO B: outros sites ===
+B4. https://ckeditor.com/ckeditor-5/demo/feature-rich/
+    Clique no fim de um parágrafo dentro do editor, aperte Enter e digite /t-linhas.
+    Esperado: as 3 linhas do A14 aparecem (em 3 parágrafos ou num parágrafo com quebras).
+    Depois aperte Ctrl+Z. Esperado: volta "/t-linhas" e o resto do texto do editor continua igual.
+    Se aparecer um menu ao digitar "/", continue digitando normalmente.
+
+B5. https://the-internet.herokuapp.com/login
+    Campo "Password": digite /t-nome. Esperado: NÃO expande (continua 7 bolinhas). É proposital:
+    a extensão ignora campos de senha.
+    Campo "Username": digite /t-nome. Esperado: Maria Silva
+B6. Mesma página, campo "Username": apague e digite /t-pagina.
+    Esperado: The Internet | Login Page
+
+=== RELATÓRIO FINAL ===
+Responda com uma tabela neste formato:
+| Caso | Resultado | O que ficou no campo / observação |
+Use ✅ quando for idêntico ao esperado (na data e na hora, confira só o formato e se é hoje),
+❌ quando for diferente (copie o texto exato que apareceu) e ⚠️ quando não deu para testar.
+No fim, liste só os ❌ e ⚠️ em uma linha cada.
+```

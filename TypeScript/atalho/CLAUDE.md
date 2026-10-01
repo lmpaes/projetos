@@ -48,6 +48,12 @@ Fora de escopo: formulários, `{if}`, `{repeat}`, `{urlload}`/`{urlsend}`, `page
   `content/rich-editors.ts` e `content/insert.ts`. Ordem geral: paste (só editores ricos) →
   `execCommand('insertText')` → plano B (setter nativo + `input`/`change` para React; DOM no contenteditable).
 - Esses editores podem cancelar o `beforeinput` e o `input` nem dispara: o expander também escuta `keyup`.
+- **Regra do separador** (decisão do dono, Etapa 8.1): o atalho só expande no início da linha ou
+  depois de espaço/pontuação; colado em letra, número, `_`, `/` ou `\` não expande. A regra fica num
+  lugar só, `src/shared/shortcut.ts` (`endsWithShortcut`), usada pelo matcher, pelo expander e pelo
+  aviso de conflito do dashboard. Por isso o caret lê 1 caractere a mais (`matcher.contextLength`) e
+  trata `<br>` e blocos aninhados como começo de linha (`content/caret.ts`).
+- `{site: selection}` sai sem espaços nas pontas (o clique triplo inclui o `\n`).
 - O CKEditor insere caracteres invisíveis (`⁠`, `​`, `﻿`); `content/caret.ts` os ignora.
 - Só eventos `isTrusted` disparam expansão (segurança). Campos `password` nunca expandem.
 - Lacunas do jsdom: sem `execCommand`, `innerText`, `DataTransfer` (shim em `tests/setup.ts`),

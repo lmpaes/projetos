@@ -73,7 +73,9 @@ export const site: CommandDefinition = {
       case 'title':
         return page.document.title;
       case 'selection':
-        return page.selection();
+        // Sem espaços/quebras nas pontas: o clique triplo seleciona a linha
+        // inteira, junto com a quebra de linha do fim.
+        return page.selection().trim();
       case 'text':
       case 'html':
         return readContent(

@@ -102,7 +102,13 @@ export function getSelectionFor(node: Node): Selection | null {
   return node.ownerDocument?.getSelection() ?? null;
 }
 
-/** Nós de texto do bloco atual, do início do bloco até o cursor. */
+/**
+ * Nós de texto da LINHA atual, do começo dela até o cursor. A linha começa no
+ * início do bloco (parágrafo, div...), depois de um <br> (Shift+Enter, quebras
+ * do CKEditor) ou depois de um bloco aninhado. Isso importa para a regra do
+ * separador: em "linha1<br>/sig", o "/sig" está no começo da linha, e não
+ * colado no "1".
+ */
 function segmentsBeforeCaret(host: HTMLElement): Segment[] | null {
   const selection = getSelectionFor(host);
   if (!selection || selection.rangeCount === 0 || !selection.isCollapsed) return null;
@@ -115,19 +121,41 @@ function segmentsBeforeCaret(host: HTMLElement): Segment[] | null {
   caret.setStart(caretNode, caretOffset);
   caret.collapse(true);
 
-  const walker = doc.createTreeWalker(closestBlock(caretNode, host), NodeFilter.SHOW_TEXT);
-  const segments: Segment[] = [];
+  const block = closestBlock(caretNode, host);
+  // Visitamos textos E elementos: os elementos (<br>, blocos) marcam onde a linha começa.
+  const walker = doc.createTreeWalker(block, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT);
+  let segments: Segment[] = [];
   for (let node = walker.nextNode(); node; node = walker.nextNode()) {
-    const text = node as Text;
-    if (text === caretNode) {
-      segments.push({ node: text, end: caretOffset });
+    if (node === caretNode && node.nodeType === Node.TEXT_NODE) {
+      segments.push({ node: node as Text, end: caretOffset });
       break;
     }
     // comparePoint: -1 = antes do cursor, 0 = no cursor, 1 = depois do cursor.
-    if (caret.comparePoint(text, text.length) > 0) break;
-    segments.push({ node: text, end: text.length });
+    const end = node.nodeType === Node.TEXT_NODE ? (node as Text).length : 0;
+    if (caret.comparePoint(node, end) > 0) break;
+
+    if (node.nodeType === Node.ELEMENT_NODE) {
+      // Um <br> antes do cursor: o que veio antes dele é outra linha.
+      if ((node as Element).tagName === 'BR') segments = [];
+      continue;
+    }
+    // Texto dentro de um bloco aninhado (ex.: o <p> em "<div><p>abc</p>/sig</div>")
+    // é outra linha, e o que vier depois dele começa uma linha nova.
+    if (isInsideNestedBlock(node, block)) {
+      segments = [];
+      continue;
+    }
+    segments.push({ node: node as Text, end: (node as Text).length });
   }
   return segments;
+}
+
+/** O nó está dentro de algum bloco (p, div, li...) que fica dentro de `root`? */
+function isInsideNestedBlock(node: Node, root: Node): boolean {
+  for (let element = node.parentElement; element && element !== root; element = element.parentElement) {
+    if (BLOCK_TAGS.has(element.tagName)) return true;
+  }
+  return false;
 }
 
 /** O bloco (parágrafo, div, li...) onde está o cursor, sem sair do editor. */

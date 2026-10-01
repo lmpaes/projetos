@@ -4,6 +4,7 @@
 // =============================================================================
 
 import type { RenderError, RenderResult } from '@/engine';
+import { endsWithShortcut } from '@/shared/shortcut';
 import type { Snippet } from '@/shared/types';
 import { readTextBeforeCaret } from './caret';
 import { describeElement, type DiagnosticLog } from './diagnostics';
@@ -101,7 +102,7 @@ export function attachExpander(doc: Document, options: ExpanderOptions): () => v
 
       // O usuário continuou digitando enquanto renderizávamos? Então desistimos.
       const current = readTextBeforeCaret(editable, matcher.contextLength);
-      if (current === null || !current.endsWith(snippet.shortcut)) {
+      if (current === null || !endsWithShortcut(current, snippet.shortcut)) {
         log('desistiu: o texto mudou antes de inserir', { atalho: snippet.shortcut });
         return;
       }

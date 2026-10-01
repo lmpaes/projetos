@@ -89,8 +89,17 @@ Na primeira instalação, o Atalho já vem com dois exemplos: `/ola` e `/pag`. A
 ### Regras do atalho
 - De 2 a 50 caracteres, sem espaços. Maiúsculas e minúsculas contam (`/Sig` ≠ `/sig`).
 - Não pode repetir: o dashboard bloqueia atalho duplicado.
+- **Precisa estar separado do que vem antes.** O atalho expande no início do campo ou da linha, ou
+  depois de espaço ou pontuação. Colado em letra, número, `_`, `/` ou `\`, ele não expande:
+
+  | Você digita | Expande? |
+  |---|---|
+  | `/sig` no começo, `Olá /sig`, `(/sig` | sim |
+  | `a/sig`, `2/sig` | não (colado em letra ou número) |
+  | `site.com/sig...`, `https://sig...` | não (dentro de um endereço) |
 - **Conflito de prefixo:** se existir `/s` e `/sig`, ao digitar `/sig` o `/s` dispara primeiro e
-  `/sig` nunca acontece. O dashboard **avisa** (em amarelo) quando isso acontece.
+  `/sig` nunca acontece. O dashboard **avisa** (em amarelo) quando isso acontece (considerando a
+  regra do separador: `si` não atrapalha `/sig`, porque em `/si` ele está colado na `/`).
 - Dica: comece os atalhos com um símbolo (`/`, `;`, `!`) para não disparar sem querer em textos normais.
 
 ---
@@ -125,7 +134,7 @@ Lê a página **onde você está digitando**.
 | `{site: query}` | `?id=123&tab=x` |
 | `{site: hash}` | `#detalhes` |
 | `{site: title}` | `Pedido 98765 — Loja` |
-| `{site: selection}` | o texto selecionado na página (ver abaixo) |
+| `{site: selection}` | o texto selecionado na página, sem espaços nas pontas (ver abaixo) |
 | `{site: text}` | o texto da página inteira (use com `selector=`) |
 | `{site: html}` | o HTML da página inteira (use com `selector=`) |
 
