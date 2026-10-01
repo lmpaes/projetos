@@ -66,6 +66,22 @@ describe('expansão', () => {
     await vi.waitFor(() => expect(host.textContent).toBe('Olá Att, Leo'));
   });
 
+  it('depois de pontuação também expande: "(/sig" vira "(Att, Leo"', async () => {
+    setup([sig]);
+    const element = textarea('');
+    typeInto(element, '(/sig');
+    await vi.waitFor(() => expect(element.value).toBe('(Att, Leo'));
+  });
+
+  it('contenteditable: atalho no começo de uma linha depois de <br> (Shift+Enter)', async () => {
+    setup([sig]);
+    const host = editable('linha1<br>/sig');
+    caretAtEnd(host);
+    host.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: 'g' }));
+    await vi.waitFor(() => expect(host.textContent).toBe('linha1Att, Leo'));
+    expect(host.innerHTML).toContain('<br>');
+  });
+
   it('campo dentro de Shadow DOM aberto (web components)', async () => {
     setup([sig]);
     const host = document.createElement('div');
@@ -173,6 +189,17 @@ describe('quando NÃO expandir', () => {
     typeInto(element, '/sig');
     await settle();
     expect(element.value).toBe('/sig');
+  });
+
+  it.each([
+    ['colado numa palavra', 'a/sig'],
+    ['dentro de um endereço', 'site.com/sig'],
+  ])('atalho %s ("%s") não expande', async (_label, typed) => {
+    setup([sig]);
+    const element = textarea('');
+    typeInto(element, typed);
+    await settle();
+    expect(element.value).toBe(typed);
   });
 
   it('campos de senha', async () => {

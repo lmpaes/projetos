@@ -49,6 +49,30 @@ describe('readTextBeforeCaret — contenteditable', () => {
     expect(readTextBeforeCaret({ kind: 'contenteditable', element: host }, 50)).toBe('ig');
   });
 
+  it('<br> antes do cursor começa uma linha nova (Shift+Enter, quebras do CKEditor)', () => {
+    const host = editable('linha1<br>/sig');
+    caretAtEnd(host);
+    expect(readTextBeforeCaret({ kind: 'contenteditable', element: host }, 50)).toBe('/sig');
+  });
+
+  it('cursor logo depois de um <br>: linha vazia', () => {
+    const host = editable('abc<br>');
+    setCaret(host, 2);
+    expect(readTextBeforeCaret({ kind: 'contenteditable', element: host }, 50)).toBe('');
+  });
+
+  it('<br> depois do cursor não atrapalha', () => {
+    const host = editable('Olá /sig<br>depois');
+    setCaret(host.firstChild as Text, 8);
+    expect(readTextBeforeCaret({ kind: 'contenteditable', element: host }, 50)).toBe('Olá /sig');
+  });
+
+  it('não junta o texto de um bloco anterior dentro do mesmo bloco ("<div><p>abc</p>/sig</div>")', () => {
+    const host = editable('<div><p>abc</p>/sig</div>');
+    caretAtEnd(host);
+    expect(readTextBeforeCaret({ kind: 'contenteditable', element: host }, 50)).toBe('/sig');
+  });
+
   it('cursor posicionado "entre elementos" também funciona', () => {
     const host = editable('Olá /sig');
     setCaret(host, 1);

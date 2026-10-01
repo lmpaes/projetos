@@ -16,7 +16,7 @@ describe('createMatcher', () => {
 
   it('o atalho mais longo vence ("/sig" e não "ig")', () => {
     expect(matcher.match('Olá /sig')?.shortcut).toBe('/sig');
-    expect(matcher.match('big')?.shortcut).toBe('ig');
+    expect(matcher.match('Olá ig')?.shortcut).toBe('ig');
   });
 
   it('atalho incompleto ou no meio do texto não conta', () => {
@@ -25,12 +25,27 @@ describe('createMatcher', () => {
     expect(matcher.match('')).toBeNull();
   });
 
+  it('atalho colado em outra palavra não conta (precisa de separador antes)', () => {
+    expect(matcher.match('a/sig')).toBeNull();
+    expect(matcher.match('site.com/end')).toBeNull();
+    expect(matcher.match('big')).toBeNull();
+    expect(matcher.match('(/sig')?.shortcut).toBe('/sig');
+    expect(matcher.match('Olá\n/end')?.shortcut).toBe('/end');
+  });
+
+  it('se o mais longo está colado, um mais curto que respeita o separador ainda vale', () => {
+    const withPunctuation = createMatcher([snippet({ shortcut: 'a-c' }), snippet({ shortcut: 'c' })]);
+    // "a-c" está colado no "x"; o "c" vem depois de "-", que é separador.
+    expect(withPunctuation.match('xa-c')?.shortcut).toBe('c');
+    expect(withPunctuation.match('x a-c')?.shortcut).toBe('a-c');
+  });
+
   it('diferencia maiúsculas de minúsculas', () => {
     expect(matcher.match('/SIG')).toBeNull();
   });
 
-  it('maxLength é o tamanho do maior atalho', () => {
-    expect(matcher.maxLength).toBe(4);
+  it('contextLength é o maior atalho + 1 (o caractere de antes, para conferir o separador)', () => {
+    expect(matcher.contextLength).toBe(5);
   });
 
   it('couldEndWith filtra pela última letra dos atalhos', () => {
@@ -41,7 +56,7 @@ describe('createMatcher', () => {
 
   it('sem snippets, nada casa', () => {
     const empty = createMatcher([]);
-    expect(empty.maxLength).toBe(0);
+    expect(empty.contextLength).toBe(0);
     expect(empty.couldEndWith('a')).toBe(false);
     expect(empty.match('qualquer coisa')).toBeNull();
   });

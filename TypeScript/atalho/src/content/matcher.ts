@@ -1,8 +1,8 @@
 import type { Snippet } from '@/shared/types';
 
 export interface ShortcutMatcher {
-  /** Tamanho do maior atalho (quanto texto precisamos ler antes do cursor). */
-  readonly maxLength: number;
+  /** Quantos caracteres ler antes do cursor. STUB (etapa 8.1): ainda é só o maior atalho. */
+  readonly contextLength: number;
   /** Algum atalho termina com este caractere? (filtro rápido a cada tecla) */
   couldEndWith(char: string): boolean;
   /** Snippet cujo atalho termina exatamente no fim do texto (o mais longo vence). */
@@ -20,7 +20,7 @@ export function createMatcher(snippets: readonly Snippet[]): ShortcutMatcher {
   const lastChars = new Set(sorted.map((snippet) => snippet.shortcut.slice(-1)));
 
   return {
-    maxLength: sorted[0]?.shortcut.length ?? 0,
+    contextLength: sorted[0]?.shortcut.length ?? 0,
     couldEndWith: (char) => lastChars.has(char),
     match: (text) => sorted.find((snippet) => text.endsWith(snippet.shortcut)) ?? null,
   };

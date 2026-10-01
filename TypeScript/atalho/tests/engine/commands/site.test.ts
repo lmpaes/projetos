@@ -38,6 +38,10 @@ describe('{site} — conteúdo da página', () => {
     expect(await textWith('{site: title}', { title: 'Meu CRM' })).toBe('Meu CRM');
   });
 
+  it('selection sem espaços e quebras de linha nas pontas (o clique triplo pega o "\\n")', async () => {
+    expect(await textWith('«{site: selection}»', { selection: '  Pizza Toppings\n' })).toBe('«Pizza Toppings»');
+  });
+
   it('selection', async () => {
     expect(await textWith('«{site: selection}»', { selection: 'texto marcado' })).toBe('«texto marcado»');
   });

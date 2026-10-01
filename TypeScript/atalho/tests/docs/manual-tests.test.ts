@@ -107,7 +107,8 @@ describe('resultados esperados do roteiro', () => {
   });
 
   it('/t-selecao usa o texto selecionado na página', async () => {
-    const result = await renderWith(contentOf('/t-selecao'), { ...HTTPBIN, selection: 'Pizza Toppings' });
+    // O clique triplo seleciona a linha inteira, com a quebra de linha do fim.
+    const result = await renderWith(contentOf('/t-selecao'), { ...HTTPBIN, selection: 'Pizza Toppings\n' });
     expect(result).toEqual({ text: 'Selecionado: Pizza Toppings', errors: [] });
   });
 

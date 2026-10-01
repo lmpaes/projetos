@@ -75,7 +75,7 @@ export function attachExpander(doc: Document, options: ExpanderOptions): () => v
       log('campo não editável', { gatilho: trigger, campo: describeElement(element) });
       return;
     }
-    const before = readTextBeforeCaret(editable, matcher.maxLength);
+    const before = readTextBeforeCaret(editable, matcher.contextLength);
     if (before === null) {
       log('sem cursor simples no campo (há texto selecionado?)', { gatilho: trigger });
       return;
@@ -100,7 +100,7 @@ export function attachExpander(doc: Document, options: ExpanderOptions): () => v
       const result = await options.render(snippet.content);
 
       // O usuário continuou digitando enquanto renderizávamos? Então desistimos.
-      const current = readTextBeforeCaret(editable, matcher.maxLength);
+      const current = readTextBeforeCaret(editable, matcher.contextLength);
       if (current === null || !current.endsWith(snippet.shortcut)) {
         log('desistiu: o texto mudou antes de inserir', { atalho: snippet.shortcut });
         return;

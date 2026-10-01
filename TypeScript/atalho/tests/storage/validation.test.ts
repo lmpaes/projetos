@@ -108,8 +108,16 @@ describe('validateSnippet — conflito de prefixo (aviso, não bloqueia)', () =>
     expect(validateSnippet(input({ shortcut: '/sig2' }), [snippet({ shortcut: '/sig' })]).warnings).toHaveLength(1);
   });
 
-  it('atalho que aparece no meio de outro também conflita ("si" dentro de "/sig")', () => {
-    expect(validateSnippet(input({ shortcut: 'si' }), [snippet({ shortcut: '/sig' })]).warnings).toHaveLength(1);
+  it('atalho no meio de outro, depois de um separador, conflita ("dt" dentro de "-dtx")', () => {
+    // Ao digitar "-dt", o "dt" vem depois de "-" (separador) e dispara.
+    expect(validateSnippet(input({ shortcut: 'dt' }), [snippet({ shortcut: '-dtx' })]).warnings).toHaveLength(1);
+    expect(validateSnippet(input({ shortcut: '-dtx' }), [snippet({ shortcut: 'dt' })]).warnings).toHaveLength(1);
+  });
+
+  it('atalho no meio de outro, mas colado, NÃO conflita ("si" dentro de "/sig")', () => {
+    // Regra do separador: em "/si", o "si" está colado na "/" e não dispara.
+    expect(validateSnippet(input({ shortcut: 'si' }), [snippet({ shortcut: '/sig' })]).warnings).toEqual([]);
+    expect(validateSnippet(input({ shortcut: '/sig' }), [snippet({ shortcut: 'si' })]).warnings).toEqual([]);
   });
 
   it('terminar igual não é conflito ("ig" e "/sig": o mais longo vence)', () => {
