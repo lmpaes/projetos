@@ -1,0 +1,68 @@
+# CI da extensão "Atalho" (TypeScript/atalho).
+# Roda lint + testes + build e publica a extensão pronta como artifact .zip.
+name: Atalho (extensão Chrome)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'TypeScript/atalho/**'
+      - '.github/workflows/atalho.yml'
+  # Também roda em pull requests: dá para baixar o zip e testar antes do merge.
+  pull_request:
+    paths:
+      - 'TypeScript/atalho/**'
+      - '.github/workflows/atalho.yml'
+  # Botão "Run workflow" na aba Actions (aparece quando o arquivo está na main).
+  workflow_dispatch:
+
+# Só leitura do repositório: o job não precisa escrever nada no GitHub.
+permissions:
+  contents: read
+
+# Se chegar um push novo no mesmo branch, cancela a execução antiga.
+concurrency:
+  group: atalho-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: TypeScript/atalho
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: TypeScript/atalho/package-lock.json
+
+      - name: Instalar dependências (versões exatas do package-lock.json)
+        run: npm ci
+
+      - name: Lint (ESLint + checagem de tipos)
+        run: npm run lint
+
+      - name: Testes (Vitest + jsdom)
+        run: npm test
+
+      - name: Build da extensão
+        run: npm run build
+
+      - name: Garantir que não há eval / new Function no build
+        run: npm run check:no-eval
+
+      # O GitHub compacta a pasta em .zip: extraia e use
+      # chrome://extensions → "Carregar sem compactação" na pasta extraída.
+      - name: Publicar artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: atalho-chrome-mv3
+          path: TypeScript/atalho/.output/chrome-mv3/
+          if-no-files-found: error
+          retention-days: 30

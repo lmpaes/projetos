@@ -1,0 +1,30 @@
+{
+  "name": "atalho",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Expansor de snippets para Chrome (projeto de estudo inspirado no Text Blaze)",
+  "type": "module",
+  "scripts": {
+    "dev": "wxt",
+    "build": "wxt build",
+    "zip": "wxt zip",
+    "postinstall": "wxt prepare",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint . && tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "check:no-eval": "node scripts/check-no-eval.mjs"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@types/node": "22.20.4",
+    "eslint": "10.11.0",
+    "globals": "17.13.0",
+    "jsdom": "30.1.1",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.71.0",
+    "vite": "7.3.6",
+    "vitest": "5.0.3",
+    "wxt": "0.21.4"
+  }
+}

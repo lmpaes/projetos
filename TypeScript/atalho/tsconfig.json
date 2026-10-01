@@ -1,0 +1,11 @@
+{
+  // O WXT gera .wxt/tsconfig.json (strict: true, aliases "@/...") ao rodar
+  // "wxt prepare" — o script "postinstall" faz isso após o "npm install".
+  "extends": "./.wxt/tsconfig.json",
+  "compilerOptions": {
+    // Já vêm ligadas no tsconfig do WXT; repetimos para deixar a intenção explícita:
+    // arr[i] e obj[chave] passam a ter tipo "T | undefined", o que obriga a checar.
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true
+  }
+}
