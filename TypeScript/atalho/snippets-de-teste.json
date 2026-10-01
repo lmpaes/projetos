@@ -1,0 +1,72 @@
+{
+  "app": "atalho",
+  "version": 1,
+  "exportedAt": "2026-10-01T12:00:00.000Z",
+  "snippets": [
+    {
+      "name": "Teste 01: partes da URL",
+      "shortcut": "/t-partes",
+      "content": "url: {site: url}\ndomain: {site: domain}\npath: {site: path}\nprotocol: {site: protocol}\nquery: {site: query}\nhash: {site: hash}\ntitle: {site: title}"
+    },
+    {
+      "name": "Teste 02: seletor (1º elemento)",
+      "shortcut": "/t-seletor",
+      "content": "{site: text; selector=legend}"
+    },
+    {
+      "name": "Teste 03: seletor (todos os elementos)",
+      "shortcut": "/t-lista",
+      "content": "{site: text; selector=legend; multiple=yes}"
+    },
+    {
+      "name": "Teste 04: extractregex do id na URL",
+      "shortcut": "/t-id",
+      "content": "ID: {=extractregex({site: query}, \"id=([^&]+)\")}"
+    },
+    {
+      "name": "Teste 05: variável",
+      "shortcut": "/t-var",
+      "content": "{pedido=extractregex({site: query}, \"id=([^&]+)\")}Pedido nº {=pedido} em {site: domain}"
+    },
+    {
+      "name": "Teste 06: seletor inexistente SEM catch",
+      "shortcut": "/t-erro",
+      "content": "Antes {site: text; selector=.nao-existe} depois"
+    },
+    {
+      "name": "Teste 07: seletor inexistente COM catch",
+      "shortcut": "/t-catch",
+      "content": "Vendedor: {=catch({site: text; selector=.nao-existe}, \"Não encontrado\")}"
+    },
+    {
+      "name": "Teste 08: data e hora",
+      "shortcut": "/t-hora",
+      "content": "{time: DD/MM/YYYY [às] HH:mm} ({time: dddd})"
+    },
+    {
+      "name": "Teste 09: área de transferência",
+      "shortcut": "/t-clip",
+      "content": "Copiado: {clipboard}"
+    },
+    {
+      "name": "Teste 10: texto simples",
+      "shortcut": "/t-nome",
+      "content": "Maria Silva"
+    },
+    {
+      "name": "Teste 11: várias linhas",
+      "shortcut": "/t-linhas",
+      "content": "Olá!\nEsta é a linha 2.\nData: {time: DD/MM/YYYY}"
+    },
+    {
+      "name": "Teste 12: título da aba e h2",
+      "shortcut": "/t-pagina",
+      "content": "{site: title} | {site: text; selector=h2}"
+    },
+    {
+      "name": "Teste 13: texto selecionado na página",
+      "shortcut": "/t-selecao",
+      "content": "Selecionado: {site: selection}"
+    }
+  ]
+}

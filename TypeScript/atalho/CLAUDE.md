@@ -34,6 +34,38 @@ hash, title, text, html, selection; `selector=`, `multiple=`), `{time: formato}`
 Dashboard (options page) com CRUD, preview ao vivo, validação de atalho e backup JSON.
 Fora de escopo: formulários, `{if}`, `{repeat}`, `{urlload}`/`{urlsend}`, `page=`, rich text, Google Docs.
 
+## Documentação para o usuário
+- `README.md` (pt-BR): instalação pelo zip do CI, uso, referência de comandos com exemplos, limitações.
+  Os exemplos foram conferidos com o motor real; ao mudar um comando, atualize a tabela correspondente.
+- `TESTES_MANUAIS.md` + `snippets-de-teste.json`: roteiro para testar no Chrome (o dono usa o Claude in
+  Chrome). `tests/docs/manual-tests.test.ts` garante que o JSON importa, que os atalhos não conflitam
+  e que cada snippet gera o "Esperado" do roteiro. Mudou o roteiro? Mude o teste junto.
+
+## Armadilhas já resolvidas (não repita)
+- **Editores ricos** (CKEditor 5/Zendesk, ProseMirror, Lexical, Slate, Quill, Draft.js) mantêm um modelo
+  próprio: desfazem mudanças diretas no DOM e até o `execCommand`. Neles a inserção é um **paste
+  sintético** (`DataTransfer` com `text/plain`) depois de `waitForSelectionSync`; ver
+  `content/rich-editors.ts` e `content/insert.ts`. Ordem geral: paste (só editores ricos) →
+  `execCommand('insertText')` → plano B (setter nativo + `input`/`change` para React; DOM no contenteditable).
+- Esses editores podem cancelar o `beforeinput` e o `input` nem dispara: o expander também escuta `keyup`.
+- O CKEditor insere caracteres invisíveis (`⁠`, `​`, `﻿`); `content/caret.ts` os ignora.
+- Só eventos `isTrusted` disparam expansão (segurança). Campos `password` nunca expandem.
+- Lacunas do jsdom: sem `execCommand`, `innerText`, `DataTransfer` (shim em `tests/setup.ts`),
+  `adoptedStyleSheets` e `isContentEditable`. No Vitest, `window` é uma cópia da janela do jsdom (compare
+  `document`, não a janela) e `import.meta.url` não é `file:` (use `process.cwd()` para ler arquivos).
+- Versões: TypeScript fica na 6.x (o typescript-eslint 8.x não aceita a 7). Não use Zod (tem `new Function`).
+- Chaves do `chrome.storage.local`: `local:snippets` (versão 1), `local:examplesSeeded`, `local:debugMode`.
+- **Modo diagnóstico** (dashboard → Configurações): o content script loga cada passo com `[Atalho]` no
+  console. É a primeira coisa a pedir quando um site não expande.
+
+## Verificação num Chromium real
+O projeto não tem Playwright (o dono só usa o CI). Para reproduzir bugs de sites/editores, monte um
+diretório **fora do projeto** (scratchpad) com `playwright` e carregue o build:
+`chromium.launchPersistentContext('', { executablePath: '/opt/pw-browsers/chromium', args:
+['--headless=new', '--disable-extensions-except=<.output/chrome-mv3>', '--load-extension=<mesmo>'] })`.
+Use `page.keyboard.type` (eventos confiáveis). Na nuvem a rede externa costuma estar bloqueada: sirva
+páginas locais (ex.: o pacote npm `ckeditor5` reproduz o editor do Zendesk).
+
 ---
 
 # CONTEXTO — Text Blaze (extensão de macros/snippets)
